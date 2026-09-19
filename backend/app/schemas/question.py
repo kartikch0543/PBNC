@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 from app.models.question import AnswerSource, QuestionStatus, QuestionType
 
@@ -14,7 +14,7 @@ class OptionItem(BaseModel):
 
 
 class QuestionResponse(BaseModel):
-    """Structured output schema for an extracted question."""
+    """Structured output schema for an extracted question matching Assignment Section 7."""
     id: uuid.UUID
     document_id: uuid.UUID
     question_number: Optional[str] = Field(
@@ -36,6 +36,22 @@ class QuestionResponse(BaseModel):
     )
     has_diagram: bool
     created_at: datetime
+
+    # Canonical assignment schema fields:
+    @computed_field
+    def question(self) -> str:
+        """Assignment-mandated 'question' stem key."""
+        return self.question_text
+
+    @computed_field
+    def answer(self) -> Optional[str]:
+        """Assignment-mandated 'answer' key."""
+        return self.detected_answer
+
+    @computed_field
+    def confidence(self) -> float:
+        """Assignment-mandated 'confidence' key (0.0 to 1.0)."""
+        return self.confidence_score
 
     class Config:
         from_attributes = True
