@@ -53,6 +53,7 @@ data/
 uploads/
 postgres_data/
 *.log
+*.db
 
 # OS generated files
 .DS_Store

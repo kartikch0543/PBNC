@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 import logging
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,14 +7,17 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.router import api_v1_router
 from app.core.config import settings
+from app.core.database import Base, engine, init_database
 from app.core.errors import AppError
+import app.models  # Register all models for metadata
 
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
-logger = logging.getLogger("document_intelligence")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Automatically initializes database tables on startup (with fallback support)."""
+    await init_database()
+    yield
+
 
 app = FastAPI(
     title="Document Intelligence & Question Extraction Service",
@@ -26,6 +30,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
+    lifespan=lifespan,
 )
 
 # CORS configuration

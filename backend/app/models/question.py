@@ -1,7 +1,7 @@
 import enum
 import uuid
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
-from sqlalchemy import Boolean, Enum, Float, ForeignKey, String, Text
+from sqlalchemy import Boolean, Enum, Float, ForeignKey, JSON, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -67,7 +67,7 @@ class Question(Base, TimestampMixin):
     )
     # Structured options: [{"key": "A", "text": "Option A text"}]
     options: Mapped[Optional[List[Dict[str, Any]]]] = mapped_column(
-        JSONB,
+        JSON().with_variant(JSONB, "postgresql"),
         nullable=True,
         default=list,
     )
@@ -93,7 +93,7 @@ class Question(Base, TimestampMixin):
     )
     # 1-indexed pages from which this question was extracted, e.g. [1, 2] for multi-page questions
     source_pages: Mapped[List[int]] = mapped_column(
-        JSONB,
+        JSON().with_variant(JSONB, "postgresql"),
         nullable=False,
         default=list,
     )
