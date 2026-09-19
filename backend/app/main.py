@@ -582,9 +582,23 @@ async def serve_review_dashboard():
 
         async function loadSampleDoc(sampleName, docType) {
             document.getElementById("docTypeSelect").value = docType;
-            displaySelectedFile(sampleName + " [Local Curated Sample]");
-            showToast(`Ready to process: ${sampleName}`);
-            window.selectedSampleName = sampleName;
+            showToast(`Loading sample: ${sampleName}...`);
+            try {
+                const res = await fetch(`/api/v1/documents/samples/${sampleName}`);
+                if (res.ok) {
+                    const blob = await res.blob();
+                    const file = new File([blob], sampleName, { type: blob.type || "application/pdf" });
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    document.getElementById("fileInput").files = dt.files;
+                    displaySelectedFile(sampleName);
+                    showToast(`Loaded ${sampleName} — Click Upload & Begin`);
+                } else {
+                    displaySelectedFile(sampleName);
+                }
+            } catch (e) {
+                displaySelectedFile(sampleName);
+            }
         }
 
         async function uploadDocument() {
@@ -598,20 +612,12 @@ async def serve_review_dashboard():
             const formData = new FormData();
             formData.append("document_type", docType);
 
-            if (fileInput.files.length > 0) {
-                formData.append("file", fileInput.files[0]);
-            } else if (window.selectedSampleName) {
-                // Fetch sample from backend sample files
-                try {
-                    const sampleRes = await fetch(`/api/v1/auth/me`, { headers: { "Authorization": `Bearer ${authToken}` } });
-                    // Use a mock/synthetic file upload via Blob if clicking quick chip
-                    const blob = new Blob(["%PDF-1.4 sample content"], { type: "application/pdf" });
-                    formData.append("file", blob, window.selectedSampleName);
-                } catch (e) {}
-            } else {
-                showToast("Please select a PDF or image file first", true);
+            if (!fileInput.files || fileInput.files.length === 0) {
+                showToast("Please choose a file or click a sample button first", true);
                 return;
             }
+
+            formData.append("file", fileInput.files[0]);
 
             showToast("Uploading document...");
             document.getElementById("uploadBtn").disabled = true;

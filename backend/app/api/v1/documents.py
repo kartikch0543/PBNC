@@ -268,3 +268,24 @@ async def get_document_relationships(
     )
     result = await db.execute(query)
     return list(result.scalars().all())
+
+
+@router.get(
+    "/samples/{filename}",
+    summary="Download pre-generated sample examination file",
+)
+async def get_sample_document(filename: str):
+    """Provides access to curated sample examination documents for 1-click evaluation."""
+    import os
+    from pathlib import Path
+    from fastapi.responses import FileResponse
+    
+    clean_name = os.path.basename(filename)
+    samples_dir = Path(__file__).resolve().parents[3] / "backend" / "samples"
+    target_path = samples_dir / clean_name
+
+    if not target_path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sample file not found")
+
+    mime = "application/pdf" if clean_name.endswith(".pdf") else ("image/png" if clean_name.endswith(".png") else "application/octet-stream")
+    return FileResponse(path=str(target_path), filename=clean_name, media_type=mime)
