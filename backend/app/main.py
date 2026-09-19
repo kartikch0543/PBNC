@@ -89,7 +89,7 @@ async def serve_review_dashboard():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pragati Bharati — Document Intelligence & Question Extraction</title>
+    <title>Document Intelligence & Question Extraction Service</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -315,8 +315,7 @@ async def serve_review_dashboard():
                 <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
             </div>
             <div>
-                <div class="brand-name">Document Intelligence Service</div>
-                <div class="brand-tag">Pragati Bharati — Round 2 Candidate Submission</div>
+                <div class="brand-name">Document Intelligence & Question Extraction Service</div>
             </div>
         </div>
         <div class="header-actions">
