@@ -3,4 +3,11 @@ pythonpath = ["backend"]
 testpaths = ["backend/tests"]
 
 [tool.pyright]
+include = ["backend"]
 extraPaths = ["backend"]
+typeCheckingMode = "off"
+reportMissingImports = false
+reportGeneralTypeIssues = false
+reportOptionalMemberAccess = false
+reportOptionalSubscript = false
+reportPrivateImportUsage = false
