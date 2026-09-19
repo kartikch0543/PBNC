@@ -281,7 +281,9 @@ async def get_sample_document(filename: str):
     from fastapi.responses import FileResponse
     
     clean_name = os.path.basename(filename)
-    samples_dir = Path(__file__).resolve().parents[3] / "backend" / "samples"
+    samples_dir = Path(__file__).resolve().parents[3] / "samples"
+    if not samples_dir.exists():
+        samples_dir = Path(__file__).resolve().parents[2] / "samples"
     target_path = samples_dir / clean_name
 
     if not target_path.exists():

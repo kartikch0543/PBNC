@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
 import { documentAPI } from '../services/api';
-import { UploadCloud, FileText, CheckCircle, AlertCircle, Sparkles, Key } from 'lucide-react';
+import { UploadCloud, FileText, CheckCircle, AlertCircle, Sparkles, Key, Loader2 } from 'lucide-react';
+
+const SAMPLES = [
+  { file: 'sample_01_clean.pdf', type: 'QUESTION_PAPER', label: 'Clean PDF (4 Qs)', desc: 'Standard 4-option MCQs with answer table' },
+  { file: 'sample_04_multi_page_question.pdf', type: 'QUESTION_PAPER', label: 'Multi-Page Q2 Test', desc: 'Question spanning across page boundaries' },
+  { file: 'sample_03_low_quality.png', type: 'QUESTION_PAPER', label: 'Scan Image (PNG)', desc: 'Raster image of exam paper for OCR' },
+  { file: 'sample_05_question_paper.pdf', type: 'QUESTION_PAPER', label: 'Unanswered Paper', desc: 'Question paper without answer key' },
+  { file: 'sample_06_separate_answer_key.pdf', type: 'ANSWER_KEY', label: '+ Attach Separate Key', desc: 'Standalone answer key PDF' },
+];
 
 export default function NewJobPage({ onJobCreated }) {
   const [jobName, setJobName] = useState('');
@@ -9,12 +17,14 @@ export default function NewJobPage({ onJobCreated }) {
   const [answerKeyFile, setAnswerKeyFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [successBanner, setSuccessBanner] = useState('');
   const [loadingSample, setLoadingSample] = useState('');
 
   const handlePaperDrop = (e) => {
     e.preventDefault();
     if (e.dataTransfer?.files?.length > 0) {
       setPaperFile(e.dataTransfer.files[0]);
+      setSuccessBanner(`Selected: ${e.dataTransfer.files[0].name}`);
     }
   };
 
@@ -22,26 +32,30 @@ export default function NewJobPage({ onJobCreated }) {
     e.preventDefault();
     if (e.dataTransfer?.files?.length > 0) {
       setAnswerKeyFile(e.dataTransfer.files[0]);
+      setSuccessBanner(`Attached Answer Key: ${e.dataTransfer.files[0].name}`);
     }
   };
 
   const loadSample = async (filename, type, label) => {
     setErrorMsg('');
-    setLoadingSample(label);
+    setLoadingSample(filename);
     try {
       const blob = await documentAPI.getSampleBlob(filename);
-      const file = new File([blob], filename, { type: blob.type || 'application/pdf' });
+      const mime = filename.endsWith('.png') ? 'image/png' : 'application/pdf';
+      const file = new File([blob], filename, { type: mime });
+
       if (type === 'ANSWER_KEY') {
         setAnswerKeyFile(file);
+        setSuccessBanner(`✓ Attached Separate Answer Key: ${filename}`);
       } else {
         setPaperFile(file);
         setDocumentType('QUESTION_PAPER');
-      }
-      if (!jobName) {
         setJobName(label);
+        setSuccessBanner(`✓ Loaded ${filename} (${label}) into Question Paper slot!`);
       }
     } catch (err) {
-      setErrorMsg(`Failed to load sample: ${filename}`);
+      console.error(err);
+      setErrorMsg(`Failed to load sample ${filename}. Please make sure the API server is active.`);
     } finally {
       setLoadingSample('');
     }
@@ -50,7 +64,7 @@ export default function NewJobPage({ onJobCreated }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!paperFile) {
-      setErrorMsg('Please select or drop a Question Paper document first.');
+      setErrorMsg('Please select or load a Question Paper document first.');
       return;
     }
 
@@ -99,48 +113,67 @@ export default function NewJobPage({ onJobCreated }) {
         </div>
       )}
 
-      {/* Curated Sample Loaders */}
-      <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 shadow-sm">
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">
-          <Sparkles className="w-4 h-4 text-cyan-400" />
-          <span>1-Click Curated Test Samples (Instant Evaluation)</span>
+      {successBanner && (
+        <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+            <span>{successBanner}</span>
+          </div>
+          <span className="text-[10px] text-emerald-400 font-mono">Ready to process</span>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => loadSample('sample_01_clean.pdf', 'QUESTION_PAPER', 'Clean PDF (4 Qs)')}
-            className="px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs font-medium text-slate-300 hover:text-white transition"
-          >
-            Clean PDF (4 Qs)
-          </button>
-          <button
-            type="button"
-            onClick={() => loadSample('sample_04_multi_page_question.pdf', 'QUESTION_PAPER', 'Multi-Page Q2 Test')}
-            className="px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs font-medium text-slate-300 hover:text-white transition"
-          >
-            Multi-Page Q2 Test
-          </button>
-          <button
-            type="button"
-            onClick={() => loadSample('sample_03_low_quality.png', 'QUESTION_PAPER', 'Low Quality Scan (PNG)')}
-            className="px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs font-medium text-slate-300 hover:text-white transition"
-          >
-            Scan Image (PNG)
-          </button>
-          <button
-            type="button"
-            onClick={() => loadSample('sample_05_question_paper.pdf', 'QUESTION_PAPER', 'Paper for Separate Key')}
-            className="px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs font-medium text-slate-300 hover:text-white transition"
-          >
-            Unanswered Paper
-          </button>
-          <button
-            type="button"
-            onClick={() => loadSample('sample_06_separate_answer_key.pdf', 'ANSWER_KEY', 'Separate Answer Key')}
-            className="px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs font-medium text-slate-300 hover:text-white transition"
-          >
-            + Attach Separate Key
-          </button>
+      )}
+
+      {/* Curated Sample Loaders */}
+      <div className="p-5 rounded-xl bg-slate-900 border border-slate-800 shadow-sm">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-300 uppercase tracking-wider">
+            <Sparkles className="w-4 h-4 text-cyan-400" />
+            <span>1-Click Curated Test Samples (Instant Evaluation)</span>
+          </div>
+          <span className="text-[11px] text-slate-400">Click any button below to auto-load</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+          {SAMPLES.map((s) => {
+            const isSelected =
+              s.type === 'ANSWER_KEY'
+                ? answerKeyFile?.name === s.file
+                : paperFile?.name === s.file;
+            const isLoading = loadingSample === s.file;
+
+            return (
+              <button
+                key={s.file}
+                type="button"
+                disabled={isLoading}
+                onClick={() => loadSample(s.file, s.type, s.label)}
+                className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
+                  isSelected
+                    ? 'bg-blue-600/15 border-blue-500 text-white shadow-md shadow-blue-500/10'
+                    : 'bg-slate-950 hover:bg-slate-800/80 border-slate-800 text-slate-300 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full mb-1">
+                  <span className="text-xs font-bold flex items-center gap-1.5">
+                    {s.type === 'ANSWER_KEY' ? (
+                      <Key className="w-3.5 h-3.5 text-cyan-400" />
+                    ) : (
+                      <FileText className="w-3.5 h-3.5 text-blue-400" />
+                    )}
+                    {s.label}
+                  </span>
+                  {isLoading ? (
+                    <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
+                  ) : isSelected ? (
+                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 px-1.5 py-0.5 rounded">
+                      ✓ Loaded
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-[10px] text-slate-400">{s.desc}</p>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -170,23 +203,35 @@ export default function NewJobPage({ onJobCreated }) {
               onDrop={handlePaperDrop}
               className={`border-2 border-dashed rounded-xl p-8 text-center transition cursor-pointer relative ${
                 paperFile
-                  ? 'border-blue-500/50 bg-blue-500/5'
+                  ? 'border-emerald-500/50 bg-emerald-500/5'
                   : 'border-slate-800 hover:border-slate-700 bg-slate-950/50'
               }`}
             >
               <input
                 type="file"
                 accept=".pdf,.png,.jpg,.jpeg"
-                onChange={(e) => e.target.files?.length && setPaperFile(e.target.files[0])}
+                onChange={(e) => {
+                  if (e.target.files?.length) {
+                    setPaperFile(e.target.files[0]);
+                    setSuccessBanner(`Selected: ${e.target.files[0].name}`);
+                  }
+                }}
                 className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
               />
-              <UploadCloud className="w-10 h-10 mx-auto text-blue-500 mb-3" />
+              <UploadCloud className={`w-10 h-10 mx-auto mb-3 ${paperFile ? 'text-emerald-400' : 'text-blue-500'}`} />
               {paperFile ? (
                 <div>
                   <p className="text-sm font-bold text-white">{paperFile.name}</p>
-                  <p className="text-xs text-blue-400 mt-1">
-                    {(paperFile.size / 1024 / 1024).toFixed(2)} MB • Ready to upload
+                  <p className="text-xs text-emerald-400 mt-1">
+                    {(paperFile.size / 1024 / 1024).toFixed(2)} MB • Ready to process
                   </p>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setPaperFile(null); }}
+                    className="text-[11px] text-red-400 hover:underline mt-2 inline-block font-semibold"
+                  >
+                    Remove File
+                  </button>
                 </div>
               ) : (
                 <div>
@@ -218,7 +263,12 @@ export default function NewJobPage({ onJobCreated }) {
               <input
                 type="file"
                 accept=".pdf,.png,.jpg,.jpeg"
-                onChange={(e) => e.target.files?.length && setAnswerKeyFile(e.target.files[0])}
+                onChange={(e) => {
+                  if (e.target.files?.length) {
+                    setAnswerKeyFile(e.target.files[0]);
+                    setSuccessBanner(`Attached Answer Key: ${e.target.files[0].name}`);
+                  }
+                }}
                 className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
               />
               {answerKeyFile ? (
