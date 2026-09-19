@@ -1,0 +1,115 @@
+{
+  "document_id": "c71a3d90-8451-4f1b-bfbb-c2ebbe71c0fa",
+  "original_filename": "sample_01_clean.pdf",
+  "document_type": "QUESTION_PAPER",
+  "processing_status": "COMPLETED",
+  "page_count": 1,
+  "summary": {
+    "total_questions": 4,
+    "extracted_count": 4,
+    "review_required_count": 0,
+    "partial_count": 0,
+    "answers_matched": 4
+  },
+  "questions": [
+    {
+      "id": "8f3b6a21-9e12-4f1a-b321-7291a1234001",
+      "document_id": "c71a3d90-8451-4f1b-bfbb-c2ebbe71c0fa",
+      "question_number": "1",
+      "question": "What is the powerhouse of the eukaryotic cell?",
+      "question_type": "MULTIPLE_CHOICE",
+      "options": [
+        { "key": "A", "text": "Nucleus" },
+        { "key": "B", "text": "Mitochondria" },
+        { "key": "C", "text": "Ribosome" },
+        { "key": "D", "text": "Endoplasmic Reticulum" }
+      ],
+      "answer": "B",
+      "answer_source": "DOCUMENT_END",
+      "confidence": 1.0,
+      "status": "EXTRACTED",
+      "source_pages": [1],
+      "has_diagram": false
+    },
+    {
+      "id": "8f3b6a21-9e12-4f1a-b321-7291a1234002",
+      "document_id": "c71a3d90-8451-4f1b-bfbb-c2ebbe71c0fa",
+      "question_number": "2",
+      "question": "Which gas is most abundant in Earth's atmosphere?",
+      "question_type": "MULTIPLE_CHOICE",
+      "options": [
+        { "key": "A", "text": "Oxygen" },
+        { "key": "B", "text": "Carbon Dioxide" },
+        { "key": "C", "text": "Nitrogen" },
+        { "key": "D", "text": "Argon" }
+      ],
+      "answer": "C",
+      "answer_source": "DOCUMENT_END",
+      "confidence": 1.0,
+      "status": "EXTRACTED",
+      "source_pages": [1],
+      "has_diagram": false
+    },
+    {
+      "id": "8f3b6a21-9e12-4f1a-b321-7291a1234003",
+      "document_id": "c71a3d90-8451-4f1b-bfbb-c2ebbe71c0fa",
+      "question_number": "3",
+      "question": "What is the chemical formula for table salt?",
+      "question_type": "MULTIPLE_CHOICE",
+      "options": [
+        { "key": "A", "text": "NaCl" },
+        { "key": "B", "text": "KCl" },
+        { "key": "C", "text": "CaCO3" },
+        { "key": "D", "text": "Na2SO4" }
+      ],
+      "answer": "A",
+      "answer_source": "DOCUMENT_END",
+      "confidence": 1.0,
+      "status": "EXTRACTED",
+      "source_pages": [1],
+      "has_diagram": false
+    },
+    {
+      "id": "8f3b6a21-9e12-4f1a-b321-7291a1234004",
+      "document_id": "c71a3d90-8451-4f1b-bfbb-c2ebbe71c0fa",
+      "question_number": "4",
+      "question": "Sound waves cannot travel through which of the following?",
+      "question_type": "MULTIPLE_CHOICE",
+      "options": [
+        { "key": "A", "text": "Air" },
+        { "key": "B", "text": "Water" },
+        { "key": "C", "text": "Steel" },
+        { "key": "D", "text": "Vacuum" }
+      ],
+      "answer": "D",
+      "answer_source": "DOCUMENT_END",
+      "confidence": 1.0,
+      "status": "EXTRACTED",
+      "source_pages": [1],
+      "has_diagram": false
+    }
+  ],
+  "sample_multi_page_split_example": {
+    "question_number": "2",
+    "question": "A high-speed train travels along a straight track, accelerating uniformly from an initial velocity of 15 m/s to 45 m/s over a time interval of 10 seconds. Determine the total distance traversed by the train during this acceleration phase, assuming linear motion throughout.",
+    "question_type": "MULTIPLE_CHOICE",
+    "options": [
+      { "key": "A", "text": "150 meters" },
+      { "key": "B", "text": "300 meters" },
+      { "key": "C", "text": "450 meters" },
+      { "key": "D", "text": "600 meters" }
+    ],
+    "answer": "B",
+    "answer_source": "DOCUMENT_END",
+    "confidence": 0.95,
+    "status": "EXTRACTED",
+    "source_pages": [1, 2],
+    "warnings": [
+      {
+        "warning_code": "SPLIT_PAGE_CONTINUATION",
+        "message": "Question spans across multiple pages: [1, 2]",
+        "source_page": 1
+      }
+    ]
+  }
+}
