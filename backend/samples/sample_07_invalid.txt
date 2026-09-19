@@ -1,0 +1,2 @@
+This is an invalid plain text file uploaded to test system rejection and security validation.
+The system should return HTTP 400 Bad Request with a clear error indicating unsupported file extension or magic bytes.

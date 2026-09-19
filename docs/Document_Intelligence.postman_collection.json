@@ -1,0 +1,256 @@
+{
+  "info": {
+    "name": "Pragati Bharati — Document Intelligence & Question Extraction Service",
+    "description": "Complete Postman collection covering authentication, document ingestion, async tracking, question extraction, answer-key reconciliation, and error rejection.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "doc_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "question_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "answer_key_doc_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"candidate@example.com\",\n  \"password\": \"candidatePassword123\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "Login (Store JWT Token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.access_token) {",
+                  "    pm.collectionVariables.set('token', jsonData.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"candidate@example.com\",\n  \"password\": \"candidatePassword123\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Get Current User Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/auth/me", "host": ["{{base_url}}"], "path": ["auth", "me"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Document Ingestion & Status",
+      "item": [
+        {
+          "name": "Upload Question Paper (PDF/Image)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.document_id) {",
+                  "    pm.collectionVariables.set('doc_id', jsonData.document_id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "backend/samples/sample_01_clean.pdf" },
+                { "key": "document_type", "value": "QUESTION_PAPER", "type": "text" }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/documents/upload", "host": ["{{base_url}}"], "path": ["documents", "upload"] }
+          }
+        },
+        {
+          "name": "Check Processing Status",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/documents/{{doc_id}}/status", "host": ["{{base_url}}"], "path": ["documents", "{{doc_id}}", "status"] }
+          }
+        },
+        {
+          "name": "List User Documents",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/documents", "host": ["{{base_url}}"], "path": ["documents"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Extracted Questions & Review",
+      "item": [
+        {
+          "name": "Get Document Questions (Structured Output)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.questions && jsonData.questions.length > 0) {",
+                  "    pm.collectionVariables.set('question_id', jsonData.questions[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/documents/{{doc_id}}/questions", "host": ["{{base_url}}"], "path": ["documents", "{{doc_id}}", "questions"] }
+          }
+        },
+        {
+          "name": "Get Individual Question Detail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/questions/{{question_id}}", "host": ["{{base_url}}"], "path": ["questions", "{{question_id}}"] }
+          }
+        },
+        {
+          "name": "Get Document Answers Summary",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/documents/{{doc_id}}/answers", "host": ["{{base_url}}"], "path": ["documents", "{{doc_id}}", "answers"] }
+          }
+        },
+        {
+          "name": "Get Extraction Warnings & Review Items",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/documents/{{doc_id}}/warnings", "host": ["{{base_url}}"], "path": ["documents", "{{doc_id}}", "warnings"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Document Relationships (Separate Answer Key)",
+      "item": [
+        {
+          "name": "Upload Standalone Answer Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.document_id) {",
+                  "    pm.collectionVariables.set('answer_key_doc_id', jsonData.document_id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "backend/samples/sample_06_separate_answer_key.pdf" },
+                { "key": "document_type", "value": "ANSWER_KEY", "type": "text" }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/documents/upload", "host": ["{{base_url}}"], "path": ["documents", "upload"] }
+          }
+        },
+        {
+          "name": "Link Question Paper to Answer Key",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target_document_id\": \"{{answer_key_doc_id}}\",\n  \"relationship_type\": \"ANSWER_KEY_FOR\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/documents/{{doc_id}}/relationships", "host": ["{{base_url}}"], "path": ["documents", "{{doc_id}}", "relationships"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Error Handling & Validation",
+      "item": [
+        {
+          "name": "Reject Unsupported File (.txt)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "backend/samples/sample_07_invalid.txt" }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/documents/upload", "host": ["{{base_url}}"], "path": ["documents", "upload"] }
+          }
+        }
+      ]
+    }
+  ]
+}
