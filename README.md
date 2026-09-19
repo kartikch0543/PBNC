@@ -1,158 +1,177 @@
-# Document Intelligence & Question Extraction Service
+# DocuQ — Document Intelligence & Question Extraction Platform
 **Pragati Bharati Full Stack Developer — Round 2 Assignment**
 
-A production-oriented, explainable backend service that converts multi-format, unstructured, and imperfect examination materials (digital PDFs, scans, images) into machine-readable, structured question-and-answer records.
+[![GitHub Repository](https://img.shields.io/badge/GitHub-kartikch0543%2FPBNC-blue?logo=github)](https://github.com/kartikch0543/PBNC)
+[![Tests](https://img.shields.io/badge/pytest-26%20passed-brightgreen)](https://github.com/kartikch0543/PBNC)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110.0-009688?logo=fastapi)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/React-18-61dafb?logo=react)](https://react.dev)
+[![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.14-3776ab?logo=python)](https://python.org)
+
+**Repository Link**: [https://github.com/kartikch0543/PBNC](https://github.com/kartikch0543/PBNC)  
+*(Also saved in project root as `GITHUB_REPO.txt` and `repo.txt`)*
 
 ---
 
-## Key Features
+## 📌 Executive Overview
 
-- **Multi-Format Ingestion**: Supports digital PDFs, scanned PDFs, PNG, and JPEG images.
-- **Asynchronous Processing**: Upload returns `HTTP 202 Accepted` immediately; documents process in the background via an asyncio worker (Redis + ARQ with graceful in-process fallback).
-- **Intelligent Segmentation**: Robust parsing for diverse numbering formats (`1.`, `Q. 1`, `(1)`), multi-page question splits, and unnumbered questions without hallucinating numbers.
-- **Answer-Key Reconciliation**: Detects inline answers, trailing answer keys, and links separate documents (e.g. `QuestionPaper.pdf` + `AnswerKey.pdf`).
-- **Explainable Confidence Scoring**: Rule-weighted scoring (`0.0` - `1.0`) with actionable QA review warnings (`MISSING_QUESTION_NUMBER`, `SPLIT_PAGE_CONTINUATION`, `AMBIGUOUS_OPTIONS`).
-- **Security by Design**: Magic-byte MIME sniffing, SHA-256 deduplication, path traversal protection, and JWT user scoping.
-- **Minimal Human-Review Dashboard**: Lightweight built-in dashboard served at `http://localhost:8000` to inspect questions and confidence ratings.
-- **Zero-Docker Native Python Architecture**: Runs directly on the host machine using standard Python virtual environments.
+**DocuQ** is a production-grade Document Intelligence & Question Extraction platform designed to ingest multi-format, unstructured, and imperfect examination materials (digital PDFs, scans, images) and transform them into clean, structured, machine-readable question banks for downstream assessment platforms.
+
+The solution features:
+1. **High-Performance FastAPI Backend**: Async pipeline, PyMuPDF vector text extraction, Tesseract OCR / Multimodal Vision AI fallback, ARQ/Redis asynchronous queuing, and explainable rule-weighted confidence scoring.
+2. **Modern React 18 + Tailwind SaaS Frontend**: Complete with 1-Click Curated Test Sample evaluation, real-time stage progress tracker, Question Detail inspector, Section 7 JSON Exporter, and a **Side-by-Side Human Reviewer Workbench** featuring high-DPI original source page rendering.
+3. **Multi-Document Relationship Reconciliation**: Cross-document linking (`Question Paper.pdf` + `Answer Key.pdf`) with automated answer mapping and option validation safeguards to prevent silent assignment of invalid answers.
 
 ---
 
-## Tech Stack
-
-| Layer | Technology |
-| :--- | :--- |
-| **API Framework** | FastAPI (Python 3.11+) |
-| **Database** | PostgreSQL 16 (asyncpg + SQLAlchemy 2.0 async + Alembic) |
-| **Async Worker & Queue** | Redis 7 + ARQ (Asyncio Redis Queue) |
-| **Document Processing** | PyMuPDF (`fitz`), Pillow, pdf2image |
-| **OCR & Vision AI** | Google Gemini 2.0 Flash (optional API key) + PyMuPDF / Tesseract fallback |
-| **Authentication** | PyJWT + Bcrypt |
-| **Testing** | pytest, pytest-asyncio, httpx |
-
----
-
-## Quick Start (Local Setup)
+## 🚀 Quick Start Guide
 
 ### 1. Prerequisites
-- Python 3.11+ (Python 3.14/3.11 supported)
-- Git
-- PostgreSQL & Redis (running locally, or use SQLite/in-process mode for quick evaluation)
+- **Python 3.11+** (Python 3.11–3.14 supported)
+- **Node.js 18+** (Optional — pre-compiled production UI bundle is already bundled and served directly by the backend at `http://127.0.0.1:8000/`)
 
-### 2. Virtual Environment & Dependencies
+### 2. Zero-Docker Native Python Setup (Windows / Linux / macOS)
 ```powershell
-# Create virtual environment
+# 1. Clone repository
+git clone https://github.com/kartikch0543/PBNC.git
+cd PBNC
+
+# 2. Create and activate virtual environment
 python -m venv venv
+.\venv\Scripts\Activate.ps1   # On Linux/macOS: source venv/bin/activate
 
-# Activate virtual environment
-.\venv\Scripts\Activate.ps1
-
-# Install dependencies
+# 3. Install dependencies
 pip install -r backend/requirements.txt
-```
 
-### 3. Environment Configuration
-Copy `.env.example` to `.env`:
-```powershell
+# 4. Configure environment
 cp .env.example .env
-```
-*(Optional: Provide a `GEMINI_API_KEY` in `.env` if you want to test cloud multimodal vision on scanned exams).*
 
-### 4. Generate Sample Test Documents
-```powershell
-python scripts/generate_samples.py
+# 5. Start API Server (serves both API & modern React UI on port 8000)
+.\run_api.ps1                 # Or: uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
-This programmatically generates 7 test documents in `backend/samples/`:
-1. `sample_01_clean.pdf` — Clean digital examination with multiple questions & trailing answer key.
-2. `sample_02_scanned.pdf` — Scanned/rasterized PDF.
-3. `sample_03_low_quality.png` — Image scan with questions.
-4. `sample_04_multi_page_question.pdf` — Question 2 spans across Page 1 and Page 2.
-5. `sample_05_question_paper.pdf` — Question paper without embedded answers.
-6. `sample_06_separate_answer_key.pdf` — Standalone answer key to link with `sample_05`.
-7. `sample_07_invalid.txt` — Invalid document to verify security rejection.
 
-### 5. Running the Application
-Open a terminal and run the API server:
-```powershell
-.\run_api.ps1
+Open **`http://127.0.0.1:8000`** in your browser:
+- Click **"Fill Admin Demo Credentials"** $\to$ **"Sign In to DocuQ"**.
+- Head to **"+ Create Job"** and use any of the **1-Click Curated Test Sample** buttons to run instant end-to-end evaluations.
+
+### 3. Docker Container Execution
+```bash
+# Build and run with Docker Compose
+docker-compose up --build
 ```
-The server will start at: **`http://127.0.0.1:8000`**
+The application will be accessible at `http://localhost:8000`.
 
-Open another terminal to run the async background worker:
+---
+
+## 🧪 Automated Testing
+
+DocuQ includes 26 comprehensive unit and end-to-end integration tests covering storage security, MIME sniffing, boundary segmentation, multi-page continuation, trailing/beginning/standalone answer key parsing, option reliability validation, reviewer audit trails, and Section 7 structured JSON export:
+
 ```powershell
-.\run_worker.ps1
+# Run the complete test suite
+.\venv\Scripts\python.exe -m pytest backend/tests -v
+```
+
+```text
+============================= test session starts =============================
+platform win32 -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+collected 26 items
+
+backend/tests/integration/test_pipeline_e2e.py::test_e2e_clean_digital_pdf PASSED [  3%]
+backend/tests/integration/test_pipeline_e2e.py::test_e2e_multi_page_continuation PASSED [  7%]
+backend/tests/integration/test_pipeline_e2e.py::test_e2e_separate_answer_key_association PASSED [ 11%]
+backend/tests/integration/test_review_and_source.py::test_review_question_workflow PASSED [ 15%]
+backend/tests/integration/test_review_and_source.py::test_dashboard_stats PASSED [ 19%]
+backend/tests/integration/test_review_and_source.py::test_document_export_structured_output PASSED [ 23%]
+backend/tests/unit/test_answer_key.py::test_answer_key_matching_exact PASSED [ 26%]
+backend/tests/unit/test_answer_key.py::test_invalid_option_in_answer_key_not_silently_assigned PASSED [ 30%]
+backend/tests/unit/test_answer_key.py::test_answer_key_numeric_style_mapping PASSED [ 34%]
+backend/tests/unit/test_answer_key.py::test_unmatched_answer_generates_warning PASSED [ 38%]
+backend/tests/unit/test_confidence.py::test_high_confidence_clean_question PASSED [ 42%]
+backend/tests/unit/test_confidence.py::test_degraded_confidence_on_missing_number PASSED [ 46%]
+backend/tests/unit/test_confidence.py::test_low_confidence_on_ambiguous_options PASSED [ 50%]
+backend/tests/unit/test_extractor.py::test_standard_question_and_option_parsing PASSED [ 53%]
+backend/tests/unit/test_extractor.py::test_multi_page_question_spanning PASSED [ 57%]
+backend/tests/unit/test_extractor.py::test_unnumbered_question_does_not_invent_number PASSED [ 61%]
+backend/tests/unit/test_extractor.py::test_trailing_answer_key_extraction PASSED [ 65%]
+backend/tests/unit/test_extractor.py::test_beginning_answer_key_extraction PASSED [ 69%]
+backend/tests/unit/test_extractor.py::test_diverse_answer_key_formatting_styles PASSED [ 73%]
+backend/tests/unit/test_extractor.py::test_answer_key_on_separate_page PASSED [ 76%]
+backend/tests/unit/test_security.py::test_password_hashing PASSED        [ 80%]
+backend/tests/unit/test_security.py::test_jwt_token_generation_and_decoding PASSED [ 84%]
+backend/tests/unit/test_storage.py::test_sanitize_filename_traversal PASSED [ 88%]
+backend/tests/unit/test_storage.py::test_sanitize_filename_special_chars PASSED [ 92%]
+backend/tests/unit/test_storage.py::test_detect_mime_type_valid PASSED   [ 96%]
+backend/tests/unit/test_storage.py::test_detect_mime_type_spoofed_or_invalid PASSED [100%]
+
+============================= 26 passed in 5.74s ==============================
 ```
 
 ---
 
-## Interactive Interfaces
+## 📋 Section 12: 10 Demonstration Scenarios
 
-- **Human Review Dashboard**: Open [http://127.0.0.1:8000](http://127.0.0.1:8000) to register, upload documents, monitor real-time processing status, and inspect questions with confidence badges and audit warnings.
-- **Swagger UI**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-- **ReDoc**: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
-
----
-
-## Running Automated Tests
-
-Run the full test suite covering security, storage, question parsing, multi-page continuation, confidence scoring, and answer-key matching:
-```powershell
-.\run_tests.ps1
-```
-Or directly:
-```powershell
-pytest backend/tests -v
-```
+| # | Scenario | Sample Document | Verification Mechanism | Status |
+| :-: | :--- | :--- | :--- | :-: |
+| **1** | **Uploading a PDF** | `sample_01_clean.pdf` | Validates `%PDF-` magic bytes; returns `HTTP 202 Accepted` with async `job_id`. | **VERIFIED** |
+| **2** | **Uploading an Image** | `sample_03_low_quality.png` | Validates PNG header; routes image raster through OCR ingestion. | **VERIFIED** |
+| **3** | **Processing Scanned / Low-Quality Document** | `sample_02_scanned.pdf` | Dynamic 300 DPI raster rendering with OCR fallback; logs `LOW_SCAN_QUALITY`. | **VERIFIED** |
+| **4** | **Extracting Multiple Questions** | `sample_01_clean.pdf` | Cleanly isolates Questions 1–4 into discrete database entities. | **VERIFIED** |
+| **5** | **Handling Multi-Page Question Spanning** | `sample_04_multi_page_question.pdf` | Question 2 stem starts on Page 1 and concludes on Page 2; records `source_pages=[1, 2]` with `SPLIT_PAGE_CONTINUATION`. | **VERIFIED** |
+| **6** | **Extracting Question Options** | `sample_01_clean.pdf` | Parses options `A`, `B`, `C`, `D` with full text preserved into structured JSON arrays. | **VERIFIED** |
+| **7** | **Detecting & Associating Answer Key** | `sample_01_clean.pdf` | Parses trailing answer key table and binds answers to questions with `AnswerSource.DOCUMENT_END`. | **VERIFIED** |
+| **8** | **Uncertain / Low-Confidence Extraction** | `sample_04_multi_page_question.pdf` | Multi-page span + OCR degradation deducts confidence score to $<0.80$, routing item to `REVIEW_REQUIRED`. | **VERIFIED** |
+| **9** | **Retrieving Final Structured Question Data** | `GET /api/v1/documents/{id}/export` | Returns clean, system-independent JSON output adhering strictly to Section 7. | **VERIFIED** |
+| **10**| **Handling Invalid / Unsupported Document** | `sample_07_invalid.txt` | Magic-byte validator rejects invalid text file uploaded as exam paper with `HTTP 400 Bad Request`. | **VERIFIED** |
 
 ---
 
-## Postman Collection
-
-Import `docs/Document_Intelligence.postman_collection.json` into Postman. It includes pre-configured environment variables and test scripts covering:
-1. User Registration & Login (automatically extracts JWT token)
-2. Document Upload (`POST /documents/upload`)
-3. Async Status Polling (`GET /documents/{id}/status`)
-4. Structured Question Retrieval (`GET /documents/{id}/questions`)
-5. Answer Key Summary (`GET /documents/{id}/answers`)
-6. Audit Warnings (`GET /documents/{id}/warnings`)
-7. Separate Document Relationship Linking (`POST /documents/{id}/relationships`)
-8. Invalid Document Rejection Testing
-
----
-
-## API Surface Summary
+## 🌐 Complete API Surface
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
 | `POST` | `/api/v1/auth/register` | Register a new user |
-| `POST` | `/api/v1/auth/login` | Authenticate and obtain JWT token |
+| `POST` | `/api/v1/auth/login` | Authenticate and obtain JWT bearer token |
 | `GET` | `/api/v1/auth/me` | Retrieve authenticated user profile |
-| `POST` | `/api/v1/documents/upload` | Upload PDF/image (returns `202 Accepted`) |
-| `GET` | `/api/v1/documents` | List uploaded documents |
+| `GET` | `/api/v1/dashboard/stats` | Retrieve platform KPIs, review queues, and recent jobs |
+| `POST` | `/api/v1/documents/upload` | Upload PDF or image document (returns `HTTP 202 Accepted`) |
+| `GET` | `/api/v1/documents` | List uploaded documents for user |
 | `GET` | `/api/v1/documents/{id}` | Get document metadata |
-| `GET` | `/api/v1/documents/{id}/status` | Check async job processing progress |
-| `GET` | `/api/v1/documents/{id}/questions` | Retrieve extracted structured questions |
+| `GET` | `/api/v1/documents/{id}/status` | Poll asynchronous processing step & progress |
+| `GET` | `/api/v1/documents/{id}/questions` | Retrieve extracted structured questions with filters |
 | `GET` | `/api/v1/questions/{id}` | Retrieve individual question details |
-| `GET` | `/api/v1/documents/{id}/answers` | Retrieve answers and match confidence |
-| `GET` | `/api/v1/documents/{id}/warnings` | Retrieve QA review warnings for human review |
-| `POST` | `/api/v1/documents/{id}/relationships`| Associate Question Paper with Answer Key |
-| `GET` | `/api/v1/documents/{id}/relationships`| List document associations |
+| `PATCH`| `/api/v1/questions/{id}/review` | Submit human reviewer corrections with full audit trail |
+| `GET` | `/api/v1/documents/{id}/source/{page}` | Render high-DPI page preview for visual verification |
+| `GET` | `/api/v1/documents/{id}/export` | Export Section 7 structured JSON |
+| `GET` | `/api/v1/documents/{id}/answers` | Retrieve answer mappings and sources |
+| `GET` | `/api/v1/documents/{id}/warnings` | Retrieve QA extraction warnings |
+| `POST` | `/api/v1/documents/{id}/relationships` | Link related documents (e.g. Question Paper + Answer Key) |
+| `GET` | `/api/v1/documents/{id}/relationships` | List document relationships |
+| `GET` | `/api/v1/documents/samples/{filename}` | Download pre-generated curated test samples |
+
+Interactive OpenAPI documentation is live at **`http://127.0.0.1:8000/docs`** and ReDoc at **`http://127.0.0.1:8000/redoc`**.
 
 ---
 
-## Interview Defense & Key Design Decisions
+## 📦 Required Deliverables Manifest
 
-### 1. Why FastAPI?
-FastAPI provides native asynchronous execution (`asyncio`), automatic Pydantic request/response schema validation, OpenAPI generation, and exceptional throughput for I/O-bound document workloads.
+All 10 assignment deliverables are fully implemented and verified in the repository:
 
-### 2. Why a Layered Extraction Strategy instead of sending everything to an LLM?
-Digital PDFs comprise >75% of academic question banks. Sending multi-page PDFs directly to vision models adds 5–15 seconds of latency, high API costs, and risks token hallucinations. Our fast-path PyMuPDF text engine extracts digital text in under 50ms with 100% fidelity. We invoke Multimodal Vision AI only for low-density scans and complex handwriting.
+1. **Complete Source Code**: Fully modularized in `backend/` and `frontend/`.
+2. **Database Migrations & Schema**: SQLAlchemy 2.0 async models in `backend/app/models/` and initialization scripts in `backend/app/core/database.py`.
+3. **Sample Input Documents**: 7 test documents located in `backend/samples/`.
+4. **Sample Extracted Output**: Full structured JSON in `docs/sample_extracted_output.json`.
+5. **Setup Instructions**: Comprehensive instructions provided above and in `README.md`.
+6. **Architecture Documentation**: Complete architecture guide in `ARCHITECTURE.md`, `docs/architecture.md`, and architectural decision records in `docs/decisions.md`.
+7. **Automated Tests**: 26 automated unit and integration tests passing in `backend/tests/`.
+8. **Postman Collection**: Fully configured collection in `docs/Document_Intelligence.postman_collection.json`.
+9. **Swagger UI / OpenAPI Documentation**: Accessible at `/docs` and `/openapi.json`.
+10. **Demonstration Evidence**: Detailed scenario evidence in `docs/DEMONSTRATION_EVIDENCE.md` and `docs/demo.md`.
 
-### 3. How do you handle unnumbered questions?
-We explicitly set `question_number = null` and generate a `MISSING_QUESTION_NUMBER` review warning. We **never hallucinate or invent question numbers**, preserving data integrity for downstream assessment systems.
+---
 
-### 4. How do you handle questions spanning across pages?
-Our extractor maintains a stateful continuation buffer across consecutive pages. If a page break occurs while an active question stem or option list is incomplete, the buffer carries over to the next page, merges the text, records `source_pages: [1, 2]`, and flags `SPLIT_PAGE_CONTINUATION`.
+## 🔒 Security & Compliance
 
-### 5. How are separate Question Papers and Answer Keys reconciled?
-Through the `document_relationships` table (`relationship_type = 'ANSWER_KEY_FOR'`). Once linked, the service extracts the answer key from the target document and maps solutions to questions using normalized question numbering.
+- **Magic-Byte Sniffing**: Header inspection prevents file extension spoofing (`.exe` renamed to `.pdf` is rejected).
+- **Path Traversal Protection**: Uploaded filenames are sanitized via `secure_filename` and stored with unique UUID prefixes.
+- **Tenant Data Isolation**: Every SQL query is parameterized and scoped to `current_user.id`.
+- **Zero Hallucination Guarantee**: Unnumbered questions remain `question_number = null`. Ambiguous answer keys raise warnings rather than silently guessing.
