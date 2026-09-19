@@ -47,9 +47,22 @@ class QuestionExtractor:
         r"^(?:(?:\(([a-dA-D]|(?:[i-v]{1,4}))\))|(?:([a-dA-D]|(?:[i-v]{1,4}))[.)]))\s+(.*)",
     )
 
-    # Answer Key header pattern
+    # Answer Key header pattern (beginning, end, or standalone page)
     ANSWER_KEY_HEADER_REGEX = re.compile(
-        r"(?:answer\s*key|solutions?|correct\s*answers?)\s*[:.-]?",
+        r"^(?:answer\s*keys?|solutions?|correct\s*answers?|key\s*answers?|marking\s*scheme|scoring\s*key|answers?)\s*[:.-]?$",
+        re.IGNORECASE,
+    )
+
+    # Broad answer key pair pattern:
+    # Supports "1. A", "1: (B)", "1 - Option C", "Q1: C", "1) A", "1 => B", "[1] D", "1. 2" (numeric options)
+    ANSWER_PAIR_REGEX = re.compile(
+        r"(?:Q(?:uestion)?\.?\s*)?(\d+)\s*[:.)\-\=–—\>\s]+\s*(?:option\s*)?\(?([a-dA-D1-4])\)?",
+        re.IGNORECASE,
+    )
+
+    # Section start signal that triggers leaving answer key block if at beginning
+    SECTION_START_REGEX = re.compile(
+        r"^(?:questions?|section\s+[a-zA-Z0-9]+|part\s+[a-zA-Z0-9]+|examination|instructions?|test\s+items?)\b",
         re.IGNORECASE,
     )
 
@@ -63,7 +76,8 @@ class QuestionExtractor:
     def extract_from_pages(cls, pages_data: List[Tuple[int, str]]) -> Tuple[List[RawQuestion], Dict[str, str]]:
         """
         Parses questions and standalone answer keys across ordered document pages.
-        Handles questions spanning across page breaks.
+        Handles questions spanning across page breaks and answer keys located at
+        the beginning, end, or middle of documents.
         """
         extracted_questions: List[RawQuestion] = []
         answer_key_dict: Dict[str, str] = {}
@@ -79,7 +93,7 @@ class QuestionExtractor:
             lines = [line.strip() for line in page_text.splitlines() if line.strip()]
 
             for line in lines:
-                # 1. Check if we entered an Answer Key block at document tail/header
+                # 1. Check if we entered an Answer Key block at document tail/header/page
                 if cls.ANSWER_KEY_HEADER_REGEX.match(line):
                     in_answer_key_section = True
                     # Flush any open question before reading answer key
@@ -100,11 +114,26 @@ class QuestionExtractor:
                     continue
 
                 if in_answer_key_section:
-                    # Parse answer key pairs, e.g. "1. A", "2: (B)", "3 - C"
-                    pair_matches = re.findall(r"(?:Q\.?)?(\d+)\s*[:.-]?\s*\(?([A-Da-d])\)?", line)
-                    for q_num, ans in pair_matches:
-                        answer_key_dict[q_num] = ans.upper()
-                    continue
+                    # Check if line contains answer key pairs (e.g. "1. A", "Q1 -> (A)", "1. A  2. B  3. C")
+                    pair_matches = cls.ANSWER_PAIR_REGEX.findall(line)
+                    if pair_matches:
+                        for q_num, ans in pair_matches:
+                            answer_key_dict[q_num] = ans.upper()
+                        continue
+
+                    # If no answer key pairs, check if questions/section started
+                    if cls.SECTION_START_REGEX.match(line):
+                        in_answer_key_section = False
+                        continue
+
+                    q_cand = cls.QUESTION_ANCHOR_REGEX.match(line)
+                    if q_cand:
+                        in_answer_key_section = False
+                        # Fall through to process as question anchor below
+                    elif len(line.split()) > 3:
+                        in_answer_key_section = False
+                    else:
+                        continue
 
                 # 2. Check for question anchor
                 q_match = cls.QUESTION_ANCHOR_REGEX.match(line)

@@ -100,3 +100,65 @@ def test_trailing_answer_key_extraction():
     assert answer_key.get("1") == "A"
     assert answer_key.get("2") == "C"
     assert answer_key.get("3") == "D"
+
+
+def test_beginning_answer_key_extraction():
+    """Answer key appearing at the beginning of the document before questions."""
+    page_text = """
+    Answer Key:
+    1. A  2. B  3. C
+
+    Questions:
+    1. What is the powerhouse of the cell?
+    A. Mitochondria
+    B. Ribosome
+    C. Nucleus
+
+    2. What is H2O?
+    A. Water
+    B. Carbon
+    C. Nitrogen
+    """
+
+    questions, answer_key = QuestionExtractor.extract_from_pages([(1, page_text)])
+    assert len(questions) == 2
+    assert questions[0].question_number == "1"
+    assert questions[1].question_number == "2"
+    assert answer_key.get("1") == "A"
+    assert answer_key.get("2") == "B"
+    assert answer_key.get("3") == "C"
+
+
+def test_diverse_answer_key_formatting_styles():
+    """Handles diverse answer key styles: arrows, colons, brackets, dashes, words."""
+    page_text = """
+    Solutions:
+    Q1 -> (A)
+    Q2: Option B
+    3 - C
+    4 = D
+    """
+
+    _, answer_key = QuestionExtractor.extract_from_pages([(1, page_text)])
+    assert answer_key.get("1") == "A"
+    assert answer_key.get("2") == "B"
+    assert answer_key.get("3") == "C"
+    assert answer_key.get("4") == "D"
+
+
+def test_answer_key_on_separate_page():
+    """Handles answer key located on a dedicated/separate page."""
+    page_1 = """
+    1. What is velocity?
+    A. Speed with direction
+    B. Distance over time
+    """
+    page_2 = """
+    Answer Key:
+    1. A
+    """
+
+    questions, answer_key = QuestionExtractor.extract_from_pages([(1, page_1), (2, page_2)])
+    assert len(questions) == 1
+    assert answer_key.get("1") == "A"
+

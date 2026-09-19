@@ -12,3 +12,7 @@ api_v1_router.include_router(documents_router)
 api_v1_router.include_router(questions_router)
 api_v1_router.include_router(warnings_router)
 
+
+@api_v1_router.get("/health", tags=["Health"])
+async def api_v1_health():
+    return {"status": "healthy", "version": "v1"}

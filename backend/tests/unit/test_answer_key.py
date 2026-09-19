@@ -19,7 +19,7 @@ def test_answer_key_matching_exact():
         question_number="2",
         question_text="Question 2 text",
         question_type=QuestionType.MULTIPLE_CHOICE,
-        options=[{"key": "B", "text": "Opt B"}],
+        options=[{"key": "C", "text": "Opt C"}],
         source_pages=[1],
     )
 
@@ -31,6 +31,49 @@ def test_answer_key_matching_exact():
     assert q1.answer_source == AnswerSource.DOCUMENT_END
     assert q2.detected_answer == "C"
     assert q2.answer_source == AnswerSource.DOCUMENT_END
+
+
+def test_invalid_option_in_answer_key_not_silently_assigned():
+    """Requirement: If answer cannot be reliably identified, flag rather than silently assign."""
+    doc_id = uuid.uuid4()
+    q = Question(
+        document_id=doc_id,
+        question_number="1",
+        question_text="Question 1 text",
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        options=[{"key": "A", "text": "Opt A"}, {"key": "B", "text": "Opt B"}],
+        source_pages=[1],
+    )
+
+    # Answer key provides "Z", which does not exist in options [A, B]
+    answer_key = {"1": "Z"}
+    results = AnswerKeyService.match_answers([q], answer_key)
+
+    assert q.detected_answer is None
+    assert q.answer_source == AnswerSource.UNMATCHED
+    _, warning = results[0]
+    assert warning is not None
+    assert warning.warning_code == WarningCode.UNMATCHED_ANSWER_KEY
+    assert "cannot be reliably assigned" in warning.message
+
+
+def test_answer_key_numeric_style_mapping():
+    """Supports diverse styles such as numeric options (1->A, 2->B)."""
+    doc_id = uuid.uuid4()
+    q = Question(
+        document_id=doc_id,
+        question_number="3",
+        question_text="Question 3 text",
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        options=[{"key": "A", "text": "Opt A"}, {"key": "B", "text": "Opt B"}],
+        source_pages=[1],
+    )
+
+    answer_key = {"3": "2"}  # '2' corresponds to option 'B'
+    results = AnswerKeyService.match_answers([q], answer_key)
+
+    assert q.detected_answer == "B"
+    assert q.answer_source == AnswerSource.DOCUMENT_END
 
 
 def test_unmatched_answer_generates_warning():

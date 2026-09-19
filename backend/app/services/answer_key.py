@@ -29,8 +29,11 @@ class AnswerKeyService:
     ) -> List[Tuple[Question, Optional[ExtractionWarning]]]:
         """
         Associates answers with questions based on exact or normalized question numbering.
+        Validates candidate answer against extracted question options so that ambiguous or
+        unreliable answers are flagged rather than silently assigned.
         """
         results: List[Tuple[Question, Optional[ExtractionWarning]]] = []
+        num_to_letter = {"1": "A", "2": "B", "3": "C", "4": "D"}
 
         for q in questions:
             warning: Optional[ExtractionWarning] = None
@@ -54,15 +57,11 @@ class AnswerKeyService:
                 results.append((q, warning))
                 continue
 
-            # Attempt exact match
+            # Attempt exact or normalized lookup
             normalized_num = q.question_number.strip().lstrip("Q").lstrip(".").strip()
-            answer_val = answer_key.get(normalized_num) or answer_key.get(q.question_number)
+            raw_answer_val = answer_key.get(normalized_num) or answer_key.get(q.question_number)
 
-            if answer_val:
-                q.detected_answer = answer_val
-                q.answer_source = source
-                results.append((q, None))
-            else:
+            if not raw_answer_val:
                 # No answer found in answer key
                 q.detected_answer = None
                 q.answer_source = AnswerSource.UNMATCHED
@@ -74,6 +73,47 @@ class AnswerKeyService:
                     source_page=q.source_pages[0] if q.source_pages else None,
                 )
                 results.append((q, warning))
+                continue
+
+            # Check reliability against question options if available
+            answer_val = raw_answer_val.strip().upper()
+            valid_opt_keys = {
+                opt.get("key", "").upper()
+                for opt in (q.options or [])
+                if isinstance(opt, dict) and opt.get("key")
+            }
+
+            if valid_opt_keys:
+                if answer_val in valid_opt_keys:
+                    q.detected_answer = answer_val
+                    q.answer_source = source
+                    results.append((q, None))
+                elif answer_val in num_to_letter and num_to_letter[answer_val] in valid_opt_keys:
+                    # Mapped numeric key style (e.g. 1 -> A)
+                    q.detected_answer = num_to_letter[answer_val]
+                    q.answer_source = source
+                    results.append((q, None))
+                else:
+                    # Reliability check failed: answer key entry does not match available options.
+                    # Flag with warning rather than silently assigning an invalid answer.
+                    q.detected_answer = None
+                    q.answer_source = AnswerSource.UNMATCHED
+                    warning = ExtractionWarning(
+                        document_id=q.document_id,
+                        question_id=q.id,
+                        warning_code=WarningCode.UNMATCHED_ANSWER_KEY,
+                        message=(
+                            f"Answer key entry '{raw_answer_val}' cannot be reliably assigned: "
+                            f"does not match any available option {sorted(list(valid_opt_keys))} for Question {q.question_number}"
+                        ),
+                        source_page=q.source_pages[0] if q.source_pages else None,
+                    )
+                    results.append((q, warning))
+            else:
+                # Question has no options (e.g. short answer / subjective)
+                q.detected_answer = answer_val
+                q.answer_source = source
+                results.append((q, None))
 
         return results
 
@@ -84,7 +124,7 @@ async def reconcile_related_documents(
     """
     Called when a user establishes a document relationship between a Question Paper
     and a separate Answer Key document. Parses the answer key document and reconciles
-    answers for all questions in the question paper.
+    answers for all questions in the question paper with option-validation safeguards.
     """
     from app.services.ocr_engine import ocr_engine
     from app.services.extractor import question_extractor
@@ -106,16 +146,34 @@ async def reconcile_related_documents(
     q_query = select(Question).where(Question.document_id == source_doc_id)
     questions = list((await db.execute(q_query)).scalars().all())
 
+    num_to_letter = {"1": "A", "2": "B", "3": "C", "4": "D"}
     matched_count = 0
+
     for q in questions:
         if not q.question_number:
             continue
         norm_num = q.question_number.strip().lstrip("Q").lstrip(".").strip()
-        ans = answer_key_dict.get(norm_num) or answer_key_dict.get(q.question_number)
-        if ans:
-            q.detected_answer = ans
-            q.answer_source = AnswerSource.RELATED_DOCUMENT
-            matched_count += 1
+        raw_ans = answer_key_dict.get(norm_num) or answer_key_dict.get(q.question_number)
+        if raw_ans:
+            ans = raw_ans.strip().upper()
+            valid_opt_keys = {
+                opt.get("key", "").upper()
+                for opt in (q.options or [])
+                if isinstance(opt, dict) and opt.get("key")
+            }
+            if valid_opt_keys:
+                if ans in valid_opt_keys:
+                    q.detected_answer = ans
+                    q.answer_source = AnswerSource.RELATED_DOCUMENT
+                    matched_count += 1
+                elif ans in num_to_letter and num_to_letter[ans] in valid_opt_keys:
+                    q.detected_answer = num_to_letter[ans]
+                    q.answer_source = AnswerSource.RELATED_DOCUMENT
+                    matched_count += 1
+            else:
+                q.detected_answer = ans
+                q.answer_source = AnswerSource.RELATED_DOCUMENT
+                matched_count += 1
 
     await db.commit()
     logger.info(f"Reconciled {matched_count} questions from related answer key document")
