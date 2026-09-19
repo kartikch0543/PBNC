@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.document import DocumentType, ProcessingStatus, RelationshipType
 from app.models.job import JobStatus
@@ -17,9 +17,7 @@ class DocumentUploadResponse(BaseModel):
     document_type: DocumentType
     processing_status: ProcessingStatus
     created_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DocumentResponse(BaseModel):
@@ -34,9 +32,7 @@ class DocumentResponse(BaseModel):
     processing_status: ProcessingStatus
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProcessingJobResponse(BaseModel):
@@ -49,9 +45,7 @@ class ProcessingJobResponse(BaseModel):
     error_message: Optional[str] = None
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DocumentRelationshipCreate(BaseModel):
@@ -72,6 +66,5 @@ class DocumentRelationshipResponse(BaseModel):
     target_document_id: uuid.UUID
     relationship_type: RelationshipType
     created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True

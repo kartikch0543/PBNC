@@ -102,6 +102,28 @@ class Question(Base, TimestampMixin):
         default=False,
         nullable=False,
     )
+    is_reviewed: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
+    reviewed_at: Mapped[Optional[str]] = mapped_column(
+        String(50),
+        nullable=True,
+    )
+    review_notes: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+    )
+    original_extraction: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"),
+        nullable=True,
+    )
+    answer_confidence: Mapped[Optional[float]] = mapped_column(
+        Float,
+        nullable=True,
+        default=None,
+    )
 
     # Relationships
     document: Mapped["Document"] = relationship("Document", back_populates="questions")

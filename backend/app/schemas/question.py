@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from app.models.question import AnswerSource, QuestionStatus, QuestionType
 
@@ -35,6 +35,11 @@ class QuestionResponse(BaseModel):
         description="1-indexed source pages from which question was extracted"
     )
     has_diagram: bool
+    is_reviewed: bool = False
+    reviewed_at: Optional[str] = None
+    review_notes: Optional[str] = None
+    original_extraction: Optional[Dict[str, Any]] = None
+    answer_confidence: Optional[float] = None
     created_at: datetime
 
     # Canonical assignment schema fields:
@@ -53,8 +58,7 @@ class QuestionResponse(BaseModel):
         """Assignment-mandated 'confidence' key (0.0 to 1.0)."""
         return self.confidence_score
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class QuestionListResponse(BaseModel):
@@ -64,3 +68,12 @@ class QuestionListResponse(BaseModel):
     partial_count: int
     review_required_count: int
     questions: List[QuestionResponse]
+
+
+class QuestionReviewUpdate(BaseModel):
+    """Schema for human reviewer corrections on an extracted question."""
+    question_text: Optional[str] = Field(default=None, description="Corrected question text")
+    options: Optional[List[Dict[str, Any]]] = Field(default=None, description="Corrected structured options")
+    detected_answer: Optional[str] = Field(default=None, description="Corrected answer identifier")
+    review_notes: Optional[str] = Field(default=None, description="Auditor review notes")
+    mark_reviewed: bool = Field(default=True, description="Whether to set is_reviewed=True")

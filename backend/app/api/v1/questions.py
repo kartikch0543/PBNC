@@ -9,7 +9,8 @@ from app.core.errors import PermissionDeniedError, ResourceNotFoundError
 from app.models.document import Document
 from app.models.question import Question, QuestionStatus, QuestionType
 from app.models.user import User
-from app.schemas.question import QuestionListResponse, QuestionResponse
+from datetime import datetime, timezone
+from app.schemas.question import QuestionListResponse, QuestionResponse, QuestionReviewUpdate
 
 router = APIRouter(tags=["Questions"])
 
@@ -124,3 +125,61 @@ async def get_document_answers(
         "answered_questions": sum(1 for q in questions if q.detected_answer is not None),
         "answers": answers,
     }
+
+
+@router.patch(
+    "/questions/{question_id}/review",
+    response_model=QuestionResponse,
+    summary="Human Reviewer correction endpoint: edit question text, options, answer, and mark reviewed",
+)
+async def review_question(
+    question_id: uuid.UUID,
+    review_in: QuestionReviewUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> QuestionResponse:
+    """
+    Allows a human reviewer to inspect, correct, and verify an extracted question.
+    Preserves the raw extraction snapshot in `original_extraction` for full auditability.
+    """
+    query = select(Question).where(Question.id == question_id)
+    question = (await db.execute(query)).scalar_one_or_none()
+    if not question:
+        raise ResourceNotFoundError("Question", question_id)
+
+    # Check ownership via parent document
+    doc = (await db.execute(select(Document).where(Document.id == question.document_id))).scalar_one_or_none()
+    if not doc or doc.user_id != current_user.id:
+        raise PermissionDeniedError("You do not have permission to review this question")
+
+    # Snapshot original extraction before first edit if not yet preserved
+    if not question.original_extraction:
+        question.original_extraction = {
+            "question_text": question.question_text,
+            "options": question.options,
+            "detected_answer": question.detected_answer,
+            "confidence_score": question.confidence_score,
+            "status": question.status.value,
+        }
+
+    # Apply reviewer edits
+    if review_in.question_text is not None:
+        question.question_text = review_in.question_text
+    if review_in.options is not None:
+        question.options = review_in.options
+    if review_in.detected_answer is not None:
+        question.detected_answer = review_in.detected_answer
+    if review_in.review_notes is not None:
+        question.review_notes = review_in.review_notes
+
+    if review_in.mark_reviewed:
+        question.is_reviewed = True
+        question.reviewed_at = datetime.now(timezone.utc).isoformat()
+        question.status = QuestionStatus.EXTRACTED
+        # Human verification gives high confidence
+        question.confidence_score = max(question.confidence_score, 0.98)
+
+    await db.commit()
+    await db.refresh(question)
+    return QuestionResponse.model_validate(question)
+

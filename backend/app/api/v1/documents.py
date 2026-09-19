@@ -1,6 +1,6 @@
 import uuid
 from typing import List, Optional
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Response, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -289,3 +289,103 @@ async def get_sample_document(filename: str):
 
     mime = "application/pdf" if clean_name.endswith(".pdf") else ("image/png" if clean_name.endswith(".png") else "application/octet-stream")
     return FileResponse(path=str(target_path), filename=clean_name, media_type=mime)
+
+
+@router.get(
+    "/{document_id}/source/{page_number}",
+    summary="Render and return a high-DPI image of a specific document page for source verification",
+)
+async def get_document_source_page(
+    document_id: uuid.UUID,
+    page_number: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Renders the exact source page from which a question was extracted.
+    Allows side-by-side human review verification between extracted text and original paper.
+    """
+    import os
+    import fitz
+
+    doc = (await db.execute(select(Document).where(Document.id == document_id))).scalar_one_or_none()
+    if not doc:
+        raise ResourceNotFoundError("Document", document_id)
+    if doc.user_id != current_user.id:
+        raise PermissionDeniedError("You do not have access to this document")
+
+    if not os.path.exists(doc.file_path):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source file not found on disk")
+
+    # If document is a raster image, return image directly
+    if doc.mime_type in ["image/png", "image/jpeg", "image/jpg"]:
+        with open(doc.file_path, "rb") as f:
+            return Response(content=f.read(), media_type=doc.mime_type)
+
+    # If document is a PDF, render the requested 1-indexed page
+    try:
+        pdf_doc = fitz.open(doc.file_path)
+        if page_number < 1 or page_number > len(pdf_doc):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Page {page_number} is out of bounds (document has {len(pdf_doc)} pages)",
+            )
+        page = pdf_doc[page_number - 1]
+        pix = page.get_pixmap(dpi=150)
+        img_bytes = pix.tobytes("png")
+        pdf_doc.close()
+        return Response(content=img_bytes, media_type="image/png")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to render source page: {str(exc)}",
+        )
+
+
+@router.get(
+    "/{document_id}/export",
+    summary="Export extracted questions matching Assignment Section 7 schema",
+)
+async def export_document_questions(
+    document_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Returns the system-independent structured JSON format required by Assignment Section 7:
+    [
+      {
+        "question": "...",
+        "options": ["...", "..."],
+        "answer": "...",
+        "source_pages": [1, 2],
+        "confidence": 0.95
+      }
+    ]
+    """
+    from app.models.question import Question
+
+    doc = (await db.execute(select(Document).where(Document.id == document_id))).scalar_one_or_none()
+    if not doc:
+        raise ResourceNotFoundError("Document", document_id)
+    if doc.user_id != current_user.id:
+        raise PermissionDeniedError("You do not have access to this document")
+
+    query = select(Question).where(Question.document_id == document_id).order_by(Question.created_at.asc())
+    questions = list((await db.execute(query)).scalars().all())
+
+    structured_export = [
+        {
+            "question": q.question_text,
+            "options": [opt.get("text", "") for opt in (q.options or [])] if q.options else [],
+            "answer": q.detected_answer,
+            "source_pages": q.source_pages or [],
+            "confidence": round(q.confidence_score, 2),
+            "is_reviewed": q.is_reviewed,
+        }
+        for q in questions
+    ]
+    return structured_export
+
