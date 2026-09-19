@@ -1,7 +1,6 @@
 import uuid
 from typing import AsyncGenerator
-import jwt
-from fastapi import Depends, status
+from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.database import get_async_session
 from app.core.errors import AuthenticationError, PermissionDeniedError
+from app.core.security import decode_access_token
 from app.models.user import User
 
 # OAuth2 scheme pointing to our login endpoint for Swagger UI authorization
@@ -33,16 +33,12 @@ async def get_current_user(
         raise AuthenticationError("Authorization token is missing")
 
     try:
-        payload = jwt.decode(
-            token,
-            settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM],
-        )
+        payload = decode_access_token(token)
         user_id_str: str = payload.get("sub")
         if not user_id_str:
             raise AuthenticationError("Token payload missing subject identifier")
         user_id = uuid.UUID(user_id_str)
-    except (jwt.PyJWTError, ValueError):
+    except Exception:
         raise AuthenticationError("Invalid or expired authentication token")
 
     query = select(User).where(User.id == user_id)
